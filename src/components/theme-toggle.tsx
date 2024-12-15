@@ -31,7 +31,6 @@ const ModernMoonIcon = () => (
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
-  const [isHovered, setIsHovered] = React.useState(false)
   const buttonRef = React.useRef<HTMLButtonElement>(null)
 
   React.useEffect(() => {
@@ -46,14 +45,7 @@ export function ThemeToggle() {
     const centerX = rect.left + rect.width / 2
     const centerY = rect.top + rect.height / 2
 
-    window.dispatchEvent(new CustomEvent('theme-change', {
-      detail: {
-        theme: nextTheme,
-        position: { x: centerX, y: centerY }
-      }
-    }))
-
-    // Create rays of light (original sunburst effect)
+    // Create rays of light (sunburst effect)
     const rays = Array.from({ length: 12 }).map((_, i) => {
       const ray = document.createElement('div')
       ray.className = 'fixed z-50 pointer-events-none'
@@ -61,8 +53,11 @@ export function ThemeToggle() {
       ray.style.height = '150px'
       ray.style.transformOrigin = 'center top'
       ray.style.background = theme === 'dark' 
-        ? 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, transparent 100%)'
-        : 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)'
+        ? 'linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, transparent 100%)'
+        : 'linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%)'
+      ray.style.filter = theme === 'dark'
+        ? 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))'
+        : 'drop-shadow(0 0 2px rgba(0, 0, 0, 0.5))'
       document.body.appendChild(ray)
       
       const angle = (i / 12) * Math.PI * 2
@@ -82,25 +77,20 @@ export function ThemeToggle() {
       return ray
     })
 
-    // Animate the transition
-    requestAnimationFrame(() => {
+    // Switch theme immediately
+    setTheme(nextTheme)
+
+    // Cleanup rays after animation
+    setTimeout(() => {
       rays.forEach(ray => {
-        ray.style.opacity = '1'
+        ray.style.opacity = '0'
+        ray.style.transform = ray.style.transform.replace('scale(1)', 'scale(1.5)')
       })
       
       setTimeout(() => {
-        setTheme(nextTheme)
-        
-        rays.forEach(ray => {
-          ray.style.opacity = '0'
-          ray.style.transform = ray.style.transform.replace('scale(1)', 'scale(1.5)')
-        })
-        
-        setTimeout(() => {
-          rays.forEach(ray => document.body.removeChild(ray))
-        }, 800)
-      }, 400)
-    })
+        rays.forEach(ray => document.body.removeChild(ray))
+      }, 800)
+    }, 400)
   }
 
   if (!mounted) {
@@ -112,52 +102,13 @@ export function ThemeToggle() {
   }
 
   return (
-    <motion.button
+    <button
       ref={buttonRef}
       onClick={toggleTheme}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
       className="relative rounded-md w-6 h-6 flex items-center justify-center"
-      whileHover={{ scale: 1.15 }}
-      whileTap={{ scale: 0.9 }}
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          className="absolute inset-0 rounded-full"
-          animate={{
-            backgroundColor: isHovered 
-              ? (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') 
-              : 'transparent',
-          }}
-          transition={{ duration: 0.3 }}
-        />
-        
-        <motion.div
-          key={theme}
-          initial={{ rotate: -90, opacity: 0 }}
-          animate={{ rotate: 0, opacity: 1 }}
-          exit={{ rotate: 90, opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="relative z-10"
-        >
-          {theme === 'dark' ? <ModernMoonIcon /> : <ModernSunIcon />}
-        </motion.div>
-      </AnimatePresence>
-      
-      <motion.div
-        className="absolute inset-0 rounded-full border-2 border-transparent"
-        animate={{
-          scale: isHovered ? [1, 1.2, 1] : 1,
-          opacity: isHovered ? [0, 0.5, 0] : 0,
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-      
+      {theme === 'dark' ? <ModernMoonIcon /> : <ModernSunIcon />}
       <span className="sr-only">Toggle theme</span>
-    </motion.button>
+    </button>
   )
 } 
